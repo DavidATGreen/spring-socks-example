@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2016 David Green.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+-->
+<html>
+	<head>
+		<title>Spring Socks Example</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<script src="https://code.jquery.com/jquery-1.12.1.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.1/sockjs.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+	</head>
+	<body>
+		<h1>Spring Socks Example</h1>
+		<h3 id="myName">MyName</h3>
+		<p>
+			<button id="toggleReadyButton">Toggle status</button>
+			<div id="readiness">Not Ready</div>
+		</p>
+		<div id="status">Inactive</div>
+
+		<script>
+			var ready = false;
+			var ws;
+			var stompClient;
+
+			$(document).ready(function()
+			{
+				$('#toggleReadyButton').click(function()
+				{
+					deactivate();
+					sendForm();	
+				});
+
+				ws = new SockJS("/person");
+
+				stompClient = Stomp.over(ws);
+
+				stompClient.connect("client1", "pass", function(frame)
+				{
+					stompClient.subscribe("/user/queue/person", function(message)
+					{
+						console.log("personal message from server: " + message.body);
+						if (message.body === "READY" || message.body === "Not Ready")
+						{
+							$('#readiness').replaceWith("<div id='readiness'>" + message.body + "</div>");
+						}
+						else if (message.body === "ACTIVATE")
+						{
+							$('#status').replaceWith("<div id='status'>" + message.body + "</div>");
+						}
+					});
+
+					$('#myName').replaceWith("<h3 id='myName'>" + frame.headers['user-name'] + "</h3>");
+				}, function(error)
+				{
+					console.log("personHandler error: " + error);	
+				});
+			});
+
+			function deactivate()
+			{
+				$('#status').replaceWith("<div id='status'>Inactive</div>");
+			}
+
+			function sendForm()
+			{
+			       ready = !ready;
+			       stompClient.send("/app/person", {}, ready);
+			};
+		</script>
+	</body>
+</html>
